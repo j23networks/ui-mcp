@@ -42,7 +42,9 @@ without Site Manager or Protect credentials.
 }
 ```
 
-## Network tools (Phase 1, read-only)
+## Network tools (read-only)
+
+**Phase 1 — core:**
 
 | Tool | Description |
 |------|-------------|
@@ -54,6 +56,15 @@ without Site Manager or Protect credentials.
 | `network_list_clients` | Connected clients in a site |
 | `network_get_client` | Single client details |
 | `network_list_vouchers` | Hotspot vouchers in a site |
+
+**Phase 1B — full read-only coverage (33 more tools):** networks (+references),
+WiFi broadcasts, firewall zones/policies (+ordering), ACL rules (+ordering),
+switching (switch stacks, MC-LAG domains, LAGs), DNS policies, traffic-matching
+lists, VPN servers & site-to-site tunnels, WANs, RADIUS profiles, DPI
+apps/categories, device tags, pending devices, countries, and voucher detail —
+as `network_list_*` / `network_get_*` tools. The full Network API inventory
+(reads + the deferred write endpoints) is catalogued in
+[docs/network_api_catalog.json](docs/network_api_catalog.json).
 
 ## Site Manager tools (Phase 2, read-only)
 

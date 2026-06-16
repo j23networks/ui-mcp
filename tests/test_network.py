@@ -8,6 +8,7 @@ import respx
 
 from ui_mcp.config import Settings
 from ui_mcp.http import UbiquitiAPIError, UbiquitiClient
+from ui_mcp.server import build_server
 
 BASE = "https://console.test"
 PATH = "/proxy/network/integration/v1"
@@ -78,3 +79,41 @@ def test_disabled_api_registers_no_tools():
     # No API key -> Network module should be inert.
     s = Settings(network_api_key=None)
     assert s.network_enabled is False
+
+
+async def test_phase1b_registers_full_readonly_surface():
+    m = build_server(Settings(network_api_key="k", site_manager_api_key=None))
+    names = {t.name for t in await m.list_tools()}
+    # 8 Phase 1 + 33 Phase 1B read-only tools.
+    assert len(names) == 41
+    # representative Phase 1B tools across the signature shapes
+    for n in (
+        "network_list_pending_devices",
+        "network_list_firewall_policies",
+        "network_get_acl_rule_ordering",
+        "network_get_dns_policy",
+    ):
+        assert n in names
+    # mutations stay deferred
+    assert not any(
+        x in names for x in ("network_create_network", "network_delete_network")
+    )
+
+
+@respx.mock
+async def test_phase1b_tool_calls_expected_path():
+    route = respx.get(f"{BASE}{PATH}/sites/S1/networks").mock(
+        return_value=httpx.Response(
+            200, json={"offset": 0, "limit": 200, "totalCount": 1, "data": [{"id": "n1"}]}
+        )
+    )
+    m = build_server(
+        Settings(
+            network_api_key="k",
+            network_base_url=BASE,
+            network_verify_tls=False,
+            site_manager_api_key=None,
+        )
+    )
+    await m.call_tool("network_list_networks", {"site_id": "S1"})
+    assert route.called

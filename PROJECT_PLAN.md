@@ -15,13 +15,24 @@ HTTP/auth/config core.
 
 ## Phases
 
-- **Phase 0 — Core scaffolding** ✅ *(this commit)*
+- **Phase 0 — Core scaffolding** ✅
   MCP skeleton, multi-API config/secrets, shared async HTTP client (auth injection,
   pagination unwrap, error normalization, self-signed TLS handling).
 
-- **Phase 1 — Network API (read-only)** 🚧 *(this commit)*
-  Tools: app info, list sites, list/get devices, device stats, list/get clients,
-  list vouchers. Mutations (device/client actions, voucher create/delete) deferred.
+- **Phase 1 — Network API (read-only core)** ✅
+  8 hand-wired tools: app info, list sites, list/get devices, device stats,
+  list/get clients, list vouchers.
+
+- **Phase 1B — Network API (full read-only coverage)** ✅
+  33 more read tools covering the rest of the API: networks (+references), WiFi
+  broadcasts, firewall zones/policies (+ordering), ACL rules (+ordering), switching
+  (switch stacks, MC-LAG, LAGs), DNS policies, traffic-matching lists, VPN servers
+  & site-to-site tunnels, WANs, RADIUS profiles, DPI apps/categories, device tags,
+  pending devices, countries, voucher detail. Registered from declarative tables
+  (41 Network read tools total). The complete endpoint inventory — all 78 ops, reads
+  **and** the 36 deferred writes (create/update/delete, device/client/port actions,
+  Cloud Connector) — is captured in `docs/network_api_catalog.json` so mutations can
+  be wired later without re-scraping the docs.
 
 - **Phase 2 — Site Manager (read-only)** ✅
   Cloud API (`https://api.ui.com/v1`, `X-API-KEY`). Tools: list hosts, get host,
