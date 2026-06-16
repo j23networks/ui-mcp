@@ -83,6 +83,30 @@ class UbiquitiClient:
                 break
         return items[:max_items] if max_items else items
 
+    async def get_paged_collection(
+        self, path: str, *, page_size: int = 100, max_items: int | None = None, **params: Any
+    ) -> list[Any]:
+        """GET a limit/offset-paginated collection that pages until a short page is
+        returned (no total-count field needed). Unwraps a ``data`` envelope if
+        present, otherwise treats the response as a plain list.
+
+        Used by APIs (e.g. Mobility) that page by ``limit``/``offset`` but don't
+        return a total count. ``max_items`` caps the total fetched.
+        """
+        items: list[Any] = []
+        offset = 0
+        while True:
+            page = await self.get(path, limit=page_size, offset=offset, **params)
+            batch = page.get("data") if isinstance(page, dict) and "data" in page else page
+            if not isinstance(batch, list):
+                # Unexpected shape — hand back as-is rather than guess.
+                return batch
+            items.extend(batch)
+            offset += len(batch)
+            if len(batch) < page_size or (max_items and len(items) >= max_items):
+                break
+        return items[:max_items] if max_items else items
+
     async def get_token_collection(
         self,
         path: str,

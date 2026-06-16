@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     protect_base_url: str | None = None
     protect_verify_tls: bool = False
 
+    # --- Mobility API (cloud) [Phase 4] ---
+    mobility_api_key: str | None = None
+    mobility_base_url: str = "https://api.ui.com"
+
     @property
     def network_enabled(self) -> bool:
         return bool(self.network_api_key)
@@ -44,6 +48,10 @@ class Settings(BaseSettings):
     @property
     def protect_enabled(self) -> bool:
         return bool(self.protect_api_key and self.protect_base_url)
+
+    @property
+    def mobility_enabled(self) -> bool:
+        return bool(self.mobility_api_key)
 
 
 def load_settings() -> Settings:

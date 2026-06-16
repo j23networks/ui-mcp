@@ -51,12 +51,13 @@ HTTP/auth/config core.
   and the connector passthrough are intentionally excluded. Full inventory (78 ops:
   37 read + 41 writes/streams) in `docs/protect_api_catalog.json`.
 
-- **Phase 4 — Mobility** ⬜ *(unblocked — API published)*
-  Public Mobility API v1.0.0 now exists at `https://api.ui.com/v1/mobility/`
-  (`X-API-Key`, scope `read:mobility`). Endpoints: list/get workspaces, list
-  workspace admins, list/get devices, list device clients, and **write** ops
-  (update device name / LAN-DHCP / WiFi settings). First write-capable module —
-  decide whether to expose mutations or keep Phase 4 read-only initially.
+- **Phase 4 — Mobility (read-only)** ✅
+  Cloud API (`https://api.ui.com/v1/mobility`, `X-API-KEY`, scope `read:mobility`).
+  5 read tools: list workspaces, list workspace admins, list devices, get device,
+  list device clients. Workspace-scoped; lists page by `limit`/`offset` (shared
+  client's `get_paged_collection`). The 3 device write endpoints (PUT name /
+  network / wireless, scope `write:mobility`) are deferred — see
+  `docs/mobility_api_catalog.json` for the full 8-endpoint inventory.
 
 ## Effort (one experienced dev)
 

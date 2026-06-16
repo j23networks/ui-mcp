@@ -3,9 +3,9 @@
 An [MCP](https://modelcontextprotocol.io) server exposing the Ubiquiti / UniFi APIs as
 tools. One server, pluggable per-API modules over a shared HTTP/auth/config core.
 
-**Status:** read-only coverage of the **Network** (Phase 1/1B), **Site Manager**
-(Phase 2), and **Protect** (Phase 3) APIs. See [PROJECT_PLAN.md](PROJECT_PLAN.md)
-for the roadmap (Mobility next).
+**Status:** read-only coverage of all four UniFi APIs — **Network** (Phase 1/1B),
+**Site Manager** (Phase 2), **Protect** (Phase 3), and **Mobility** (Phase 4). See
+[PROJECT_PLAN.md](PROJECT_PLAN.md) for the roadmap and deferred write endpoints.
 
 ## Setup
 
@@ -94,6 +94,25 @@ relays, link-stations, users, ULP users, arm profiles, NVRs, and meta info, plus
 (snapshots, file downloads), WebSocket subscriptions, and mutations are excluded;
 the full Protect API inventory is catalogued in
 [docs/protect_api_catalog.json](docs/protect_api_catalog.json).
+
+## Mobility tools (Phase 4, read-only)
+
+Cloud API. Set `UBIQUITI_MOBILITY_API_KEY` (from [unifi.ui.com](https://unifi.ui.com),
+scope `read:mobility`) to enable. Resources are workspace-scoped.
+
+| Tool | Description |
+|------|-------------|
+| `mobility_list_workspaces` | Workspaces on the account (source of `workspace_id`) |
+| `mobility_list_workspace_admins` | Admins of a workspace |
+| `mobility_list_devices` | Devices in a workspace |
+| `mobility_get_device` | Single device details |
+| `mobility_list_device_clients` | Clients connected to a device |
+
+Device write endpoints (update name / network / wireless) are deferred; the full
+inventory is in [docs/mobility_api_catalog.json](docs/mobility_api_catalog.json).
+
+> **Note:** add `UBIQUITI_MOBILITY_API_KEY=` (and optionally
+> `UBIQUITI_MOBILITY_BASE_URL=https://api.ui.com`) to your `.env`.
 
 ## Test
 

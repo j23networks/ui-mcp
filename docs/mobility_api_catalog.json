@@ -1,0 +1,102 @@
+{
+  "api": "UniFi Mobility API",
+  "version": "v1.0.0",
+  "base_path": "/v1/mobility",
+  "host": "https://api.ui.com",
+  "auth": "X-API-KEY header (scope read:mobility / write:mobility)",
+  "source": "https://developer.ui.com/mobility/v1.0.0/",
+  "note": "Generated from official docs. client_path is relative to base_path. read_only=true means GET. Lists page by limit/offset.",
+  "counts": {
+    "total": 8,
+    "read": 5,
+    "write": 3
+  },
+  "endpoints": [
+    {
+      "slug": "listworkspaces",
+      "method": "GET",
+      "path": "/v1/mobility/workspaces",
+      "client_path": "/workspaces",
+      "scope": "read:mobility",
+      "pagination": null,
+      "read_only": true,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/listworkspaces"
+    },
+    {
+      "slug": "listworkspaceadmins",
+      "method": "GET",
+      "path": "/v1/mobility/workspaces/{workspaceID}/admins",
+      "client_path": "/workspaces/{workspaceID}/admins",
+      "scope": "read:mobility",
+      "pagination": null,
+      "read_only": true,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/listworkspaceadmins"
+    },
+    {
+      "slug": "listdevices",
+      "method": "GET",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices",
+      "client_path": "/workspaces/{workspaceID}/devices",
+      "scope": "read:mobility",
+      "pagination": [
+        "limit",
+        "offset"
+      ],
+      "read_only": true,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/listdevices"
+    },
+    {
+      "slug": "getdevice",
+      "method": "GET",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices/{deviceID}",
+      "client_path": "/workspaces/{workspaceID}/devices/{deviceID}",
+      "scope": "read:mobility",
+      "pagination": null,
+      "read_only": true,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/getdevice"
+    },
+    {
+      "slug": "listdeviceclients",
+      "method": "GET",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices/{deviceID}/clients",
+      "client_path": "/workspaces/{workspaceID}/devices/{deviceID}/clients",
+      "scope": "read:mobility",
+      "pagination": [
+        "limit",
+        "offset"
+      ],
+      "read_only": true,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/listdeviceclients"
+    },
+    {
+      "slug": "updatedevicename",
+      "method": "PUT",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices/{deviceID}",
+      "client_path": "/workspaces/{workspaceID}/devices/{deviceID}",
+      "scope": "write:mobility",
+      "pagination": null,
+      "read_only": false,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/updatedevicename"
+    },
+    {
+      "slug": "updatedevicenetwork",
+      "method": "PUT",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices/{deviceID}/network",
+      "client_path": "/workspaces/{workspaceID}/devices/{deviceID}/network",
+      "scope": "write:mobility",
+      "pagination": null,
+      "read_only": false,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/updatedevicenetwork"
+    },
+    {
+      "slug": "updatedevicewireless",
+      "method": "PUT",
+      "path": "/v1/mobility/workspaces/{workspaceID}/devices/{deviceID}/wireless",
+      "client_path": "/workspaces/{workspaceID}/devices/{deviceID}/wireless",
+      "scope": "write:mobility",
+      "pagination": null,
+      "read_only": false,
+      "doc_url": "https://developer.ui.com/mobility/v1.0.0/updatedevicewireless"
+    }
+  ]
+}
