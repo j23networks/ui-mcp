@@ -3,8 +3,9 @@
 An [MCP](https://modelcontextprotocol.io) server exposing the Ubiquiti / UniFi APIs as
 tools. One server, pluggable per-API modules over a shared HTTP/auth/config core.
 
-**Status:** Phase 1 — read-only **Network** API; Phase 2 — read-only **Site Manager**
-API. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the roadmap (Protect → Mobility).
+**Status:** read-only coverage of the **Network** (Phase 1/1B), **Site Manager**
+(Phase 2), and **Protect** (Phase 3) APIs. See [PROJECT_PLAN.md](PROJECT_PLAN.md)
+for the roadmap (Mobility next).
 
 ## Setup
 
@@ -79,6 +80,20 @@ Cloud API at `https://api.ui.com`. Set `UBIQUITI_SITE_MANAGER_API_KEY` (from
 | `sitemanager_list_devices` | Devices across the account (optional `host_ids` filter) |
 | `sitemanager_get_isp_metrics` | ISP metrics for all sites (`5m`/`1h` interval) |
 | `sitemanager_query_isp_metrics` | ISP metrics for specific sites/time ranges |
+
+## Protect tools (Phase 3, read-only)
+
+Local NVR API. Set `UBIQUITI_PROTECT_API_KEY` and `UBIQUITI_PROTECT_BASE_URL`
+(e.g. `https://192.168.1.1`) to enable. Local NVRs use self-signed certs, so
+`UBIQUITI_PROTECT_VERIFY_TLS=false` is the default.
+
+34 read tools — `protect_list_*` and `protect_get_*` — covering cameras, sensors,
+lights, chimes, sirens, speakers, viewers, liveviews, bridges, alarm-hubs, fobs,
+relays, link-stations, users, ULP users, arm profiles, NVRs, and meta info, plus
+`protect_get_camera_rtsps_stream` (stream URLs, not video). Media-byte endpoints
+(snapshots, file downloads), WebSocket subscriptions, and mutations are excluded;
+the full Protect API inventory is catalogued in
+[docs/protect_api_catalog.json](docs/protect_api_catalog.json).
 
 ## Test
 

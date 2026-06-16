@@ -41,8 +41,15 @@ HTTP/auth/config core.
   envelope handled in the shared client. SD-WAN config endpoints deferred (not in
   original scope). Builds on Phase 0 core (added `post` + `get_token_collection`).
 
-- **Phase 3 — Protect** ⬜
-  Cameras, events, recordings, sensors. Surface metadata + URLs, not media bytes.
+- **Phase 3 — Protect (read-only)** ✅
+  Local NVR API (`https://<nvr>/proxy/protect/integration/v1`, `X-API-KEY`). 34
+  read tools: list + get-by-id for cameras, sensors, lights, chimes, sirens,
+  speakers, viewers, liveviews, bridges, alarm-hubs, fobs, relays, link-stations,
+  users, ulp-users; plus arm-profiles, NVRs, meta info, and camera RTSPS stream
+  URLs. Lists return plain JSON arrays (no pagination envelope). Per plan, media
+  bytes (`/snapshot`, `/files/{type}`), WebSocket subscriptions (`/subscribe/*`),
+  and the connector passthrough are intentionally excluded. Full inventory (78 ops:
+  37 read + 41 writes/streams) in `docs/protect_api_catalog.json`.
 
 - **Phase 4 — Mobility** ⬜ *(unblocked — API published)*
   Public Mobility API v1.0.0 now exists at `https://api.ui.com/v1/mobility/`
