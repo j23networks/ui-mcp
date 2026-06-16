@@ -53,6 +53,12 @@ class UbiquitiClient:
         resp = await self._client.get(self._base + path, params=clean)
         return self._handle(resp)
 
+    async def post(self, path: str, json: Any = None, **params: Any) -> Any:
+        """POST a JSON body, returning parsed JSON (envelope intact)."""
+        clean = {k: v for k, v in params.items() if v is not None}
+        resp = await self._client.post(self._base + path, params=clean, json=json)
+        return self._handle(resp)
+
     async def get_collection(
         self, path: str, *, limit: int = 200, max_items: int | None = None, **params: Any
     ) -> list[Any]:
@@ -74,6 +80,40 @@ class UbiquitiClient:
             total = page.get("totalCount", len(items))
             offset += len(batch)
             if not batch or offset >= total or (max_items and len(items) >= max_items):
+                break
+        return items[:max_items] if max_items else items
+
+    async def get_token_collection(
+        self,
+        path: str,
+        *,
+        page_size: int = 200,
+        max_items: int | None = None,
+        size_param: str = "pageSize",
+        token_param: str = "nextToken",
+        **params: Any,
+    ) -> list[Any]:
+        """GET a cursor-paginated collection (Site Manager style), following the
+        response ``nextToken`` until it's empty and returning a flat list of the
+        ``data`` items.
+
+        Unlike ``get_collection`` (offset/limit), the cloud APIs page with an
+        opaque cursor: each response carries a ``nextToken`` that's fed back as a
+        query param on the next request. ``max_items`` caps the total fetched.
+        """
+        items: list[Any] = []
+        token: str | None = None
+        while True:
+            page = await self.get(
+                path, **{size_param: page_size, token_param: token}, **params
+            )
+            if not isinstance(page, dict) or "data" not in page:
+                # Not the expected envelope — hand back whatever we got.
+                return page if isinstance(page, list) else [page]
+            batch = page.get("data") or []
+            items.extend(batch)
+            token = page.get("nextToken")
+            if not token or not batch or (max_items and len(items) >= max_items):
                 break
         return items[:max_items] if max_items else items
 

@@ -11,7 +11,7 @@ HTTP/auth/config core.
 | **Network** | Local controller | `X-API-KEY` header | `https://<console>/proxy/network/integration/v1/` | Official, OpenAPI-documented, v9.3+. Self-signed TLS. |
 | **Site Manager** | Cloud | `X-API-Key` header | `https://api.ui.com/v1/` | Read-only today (write "coming"). `429` rate limiting. |
 | **Protect** | Local NVR | API key | separate base path | Larger, media-heavy, less version-stable. |
-| **Mobility** | — | — | — | **No public developer API found (2026-06).** Blocked pending UI publishing one. Confirm product. |
+| **Mobility** | Cloud | `X-API-Key` header | `https://api.ui.com/v1/mobility/` | **Public API now published (v1.0.0).** Workspaces/devices/clients + device-config writes. Scope-based (`read:mobility`). |
 
 ## Phases
 
@@ -23,16 +23,22 @@ HTTP/auth/config core.
   Tools: app info, list sites, list/get devices, device stats, list/get clients,
   list vouchers. Mutations (device/client actions, voucher create/delete) deferred.
 
-- **Phase 2 — Site Manager** ⬜
-  Cloud auth, hosts/sites/devices/ISP metrics. Read-only. Reuses core.
-  Note: a mature read-only Site Manager MCP already exists (`us-all/unifi-mcp-server`) —
-  evaluate fork vs. build before starting.
+- **Phase 2 — Site Manager (read-only)** ✅
+  Cloud API (`https://api.ui.com/v1`, `X-API-KEY`). Tools: list hosts, get host,
+  list sites, list devices, get ISP metrics, query ISP metrics. Cursor pagination
+  (`pageSize`/`nextToken`) and the `{data, httpStatusCode, traceId, nextToken}`
+  envelope handled in the shared client. SD-WAN config endpoints deferred (not in
+  original scope). Builds on Phase 0 core (added `post` + `get_token_collection`).
 
 - **Phase 3 — Protect** ⬜
   Cameras, events, recordings, sensors. Surface metadata + URLs, not media bytes.
 
-- **Phase 4 — Mobility** ⬜ *(blocked)*
-  Spike first: confirm a public API exists and is reachable.
+- **Phase 4 — Mobility** ⬜ *(unblocked — API published)*
+  Public Mobility API v1.0.0 now exists at `https://api.ui.com/v1/mobility/`
+  (`X-API-Key`, scope `read:mobility`). Endpoints: list/get workspaces, list
+  workspace admins, list/get devices, list device clients, and **write** ops
+  (update device name / LAN-DHCP / WiFi settings). First write-capable module —
+  decide whether to expose mutations or keep Phase 4 read-only initially.
 
 ## Effort (one experienced dev)
 

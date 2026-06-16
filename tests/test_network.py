@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from ubiquiti_mcp.config import Settings
-from ubiquiti_mcp.http import UbiquitiAPIError, UbiquitiClient
+from ui_mcp.config import Settings
+from ui_mcp.http import UbiquitiAPIError, UbiquitiClient
 
 BASE = "https://console.test"
 PATH = "/proxy/network/integration/v1"

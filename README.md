@@ -1,10 +1,10 @@
-# ubiquiti-mcp
+# ui-mcp
 
 An [MCP](https://modelcontextprotocol.io) server exposing the Ubiquiti / UniFi APIs as
 tools. One server, pluggable per-API modules over a shared HTTP/auth/config core.
 
-**Status:** Phase 1 — read-only **Network** API. See [PROJECT_PLAN.md](PROJECT_PLAN.md)
-for the roadmap (Site Manager → Protect → Mobility).
+**Status:** Phase 1 — read-only **Network** API; Phase 2 — read-only **Site Manager**
+API. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the roadmap (Protect → Mobility).
 
 ## Setup
 
@@ -55,6 +55,20 @@ without Site Manager or Protect credentials.
 | `network_get_client` | Single client details |
 | `network_list_vouchers` | Hotspot vouchers in a site |
 
+## Site Manager tools (Phase 2, read-only)
+
+Cloud API at `https://api.ui.com`. Set `UBIQUITI_SITE_MANAGER_API_KEY` (from
+[unifi.ui.com](https://unifi.ui.com) → **Settings → API Keys**) to enable these.
+
+| Tool | Description |
+|------|-------------|
+| `sitemanager_list_hosts` | Hosts (consoles/gateways) on the account |
+| `sitemanager_get_host` | Single host by id |
+| `sitemanager_list_sites` | Network sites across all hosts |
+| `sitemanager_list_devices` | Devices across the account (optional `host_ids` filter) |
+| `sitemanager_get_isp_metrics` | ISP metrics for all sites (`5m`/`1h` interval) |
+| `sitemanager_query_isp_metrics` | ISP metrics for specific sites/time ranges |
+
 ## Test
 
 ```bash
@@ -64,7 +78,7 @@ pytest
 ## Architecture
 
 ```
-src/ubiquiti_mcp/
+src/ui_mcp/
   config.py        # per-API settings; an API is "enabled" iff its key is set
   http.py          # async client: auth, self-signed TLS, pagination, error norm
   server.py        # FastMCP instance; registers each enabled API module
