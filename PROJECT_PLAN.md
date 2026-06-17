@@ -36,8 +36,9 @@ HTTP/auth/config core.
   re-scraping the docs.
 
 - **Phase 2 — Site Manager (read-only)** ✅
-  Cloud API (`https://api.ui.com/v1`, `X-API-KEY`). Tools: list hosts, get host,
-  list sites, list devices, get ISP metrics, query ISP metrics. Cursor pagination
+  Cloud API (`https://api.ui.com/v1`, `X-API-KEY`). **Consolidated** into 4 tools:
+  `sitemanager_list(resource)` (hosts/sites/devices), `sitemanager_get_host`,
+  `sitemanager_get_isp_metrics`, `sitemanager_query_isp_metrics`. Cursor pagination
   (`pageSize`/`nextToken`) and the `{data, httpStatusCode, traceId, nextToken}`
   envelope handled in the shared client. SD-WAN config endpoints deferred (not in
   original scope). Builds on Phase 0 core (added `post` + `get_token_collection`).

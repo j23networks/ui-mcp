@@ -101,3 +101,32 @@ async def test_post_sends_json_body():
 def test_disabled_site_manager_registers_no_tools():
     s = Settings(site_manager_api_key=None)
     assert s.site_manager_enabled is False
+
+
+async def test_site_manager_registers_consolidated_surface():
+    from ui_mcp.server import build_server
+
+    m = build_server(Settings(site_manager_api_key="k", network_api_key=None))
+    tools = {t.name: t for t in await m.list_tools()}
+    assert set(tools) == {
+        "sitemanager_list",
+        "sitemanager_get_host",
+        "sitemanager_get_isp_metrics",
+        "sitemanager_query_isp_metrics",
+    }
+    list_enum = tools["sitemanager_list"].inputSchema["properties"]["resource"]["enum"]
+    assert set(list_enum) == {"hosts", "sites", "devices"}
+
+
+@respx.mock
+async def test_site_manager_list_routes_and_paginates():
+    from ui_mcp.server import build_server
+
+    route = respx.get(f"{BASE}{PATH}/sites")
+    route.side_effect = [
+        httpx.Response(200, json={"data": [1, 2], "nextToken": "t"}),
+        httpx.Response(200, json={"data": [3], "nextToken": ""}),
+    ]
+    m = build_server(Settings(site_manager_api_key="key-abc", network_api_key=None))
+    await m.call_tool("sitemanager_list", {"resource": "sites"})
+    assert route.call_count == 2

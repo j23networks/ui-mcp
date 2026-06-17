@@ -78,10 +78,8 @@ Cloud API at `https://api.ui.com`. Set `UBIQUITI_SITE_MANAGER_API_KEY` (from
 
 | Tool | Description |
 |------|-------------|
-| `sitemanager_list_hosts` | Hosts (consoles/gateways) on the account |
-| `sitemanager_get_host` | Single host by id |
-| `sitemanager_list_sites` | Network sites across all hosts |
-| `sitemanager_list_devices` | Devices across the account (optional `host_ids` filter) |
+| `sitemanager_list(resource, host_ids?, time?)` | List `hosts`, `sites`, or `devices` (filters apply to `devices`) |
+| `sitemanager_get_host(host_id)` | Single host by id |
 | `sitemanager_get_isp_metrics` | ISP metrics for all sites (`5m`/`1h` interval) |
 | `sitemanager_query_isp_metrics` | ISP metrics for specific sites/time ranges |
 

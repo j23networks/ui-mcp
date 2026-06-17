@@ -1,4 +1,4 @@
-"""UniFi Site Manager API — read-only tools (Phase 2).
+"""UniFi Site Manager API — read-only tools (consolidated).
 
 Cloud API at ``https://api.ui.com/v1``, auth via ``X-API-KEY``. Read-only today
 (UI notes write endpoints are "coming"). Differs from the local Network API in
@@ -8,12 +8,16 @@ two ways handled here:
 - A ``{data, httpStatusCode, traceId, nextToken}`` response envelope; tools
   return the unwrapped ``data`` payload.
 
-Cloud endpoint, so TLS is verified (no self-signed handling).
+The three collection endpoints are exposed through one ``sitemanager_list(resource)``
+tool; the by-id host fetch and the two ISP-metrics calls (a time-windowed GET and a
+POST query) stay as dedicated tools since their shapes differ.
+
+Cloud endpoint, so TLS is verified (no self-signed handling). (No
+``from __future__ import annotations`` so the dynamic ``Literal`` enum is a real
+annotation object FastMCP can introspect.)
 """
 
-from __future__ import annotations
-
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
@@ -21,6 +25,15 @@ from ..config import Settings
 from ..http import UbiquitiClient
 
 API_PATH = "/v1"
+
+# resource key -> path relative to API_PATH (cursor-paginated collections)
+_LIST: dict[str, str] = {
+    "hosts": "/hosts",
+    "sites": "/sites",
+    "devices": "/devices",
+}
+
+ListResource = Literal[tuple(_LIST)]  # type: ignore[valid-type]
 
 
 def register(mcp: FastMCP, settings: Settings) -> None:
@@ -35,24 +48,38 @@ def register(mcp: FastMCP, settings: Settings) -> None:
             api_path=API_PATH,
         )
 
-    async def _data(client: UbiquitiClient, path: str, **params: Any) -> Any:
+    async def _data(c: UbiquitiClient, path: str, **params: Any) -> Any:
         """GET a single resource and return its unwrapped ``data`` payload."""
-        env = await client.get(path, **params)
+        env = await c.get(path, **params)
         return env.get("data") if isinstance(env, dict) and "data" in env else env
 
     @mcp.tool()
-    async def sitemanager_list_hosts(max_items: int = 200) -> Any:
-        """List all UniFi hosts (consoles/gateways) on the UI cloud account.
-
-        A host is a device running UniFi OS. Most other Site Manager tools key off
-        a ``host_id`` returned here.
+    async def sitemanager_list(
+        resource: ListResource,
+        host_ids: list[str] | None = None,
+        time: str | None = None,
+        max_items: int = 200,
+    ) -> Any:
+        """List a Site Manager collection (cursor-paginated, returns flat data).
 
         Args:
-            max_items: Cap on hosts returned (follows pagination up to this many).
+            resource: ``hosts`` (consoles/gateways — source of host ids),
+                ``sites`` (Network sites across hosts), or ``devices``.
+            host_ids: Only for ``resource="devices"`` — filter to these host ids.
+            time: Only for ``resource="devices"`` — RFC3339 timestamp; devices
+                processed since then.
+            max_items: Cap on items returned (follows nextToken paging).
         """
+        params: dict[str, Any] = {}
+        if resource == "devices":
+            if host_ids:
+                # The API expects the ids comma-joined under the ``hostIds[]`` key.
+                params["hostIds[]"] = ",".join(host_ids)
+            if time:
+                params["time"] = time
         c = client()
         try:
-            return await c.get_token_collection("/hosts", max_items=max_items)
+            return await c.get_token_collection(_LIST[resource], max_items=max_items, **params)
         finally:
             await c.aclose()
 
@@ -61,50 +88,11 @@ def register(mcp: FastMCP, settings: Settings) -> None:
         """Get detailed info for a single host by id.
 
         Args:
-            host_id: Host id from ``sitemanager_list_hosts``.
+            host_id: Host id from ``sitemanager_list`` with ``resource="hosts"``.
         """
         c = client()
         try:
             return await _data(c, f"/hosts/{host_id}")
-        finally:
-            await c.aclose()
-
-    @mcp.tool()
-    async def sitemanager_list_sites(max_items: int = 200) -> Any:
-        """List all UniFi Network sites (across hosts) on the UI cloud account.
-
-        Args:
-            max_items: Cap on sites returned.
-        """
-        c = client()
-        try:
-            return await c.get_token_collection("/sites", max_items=max_items)
-        finally:
-            await c.aclose()
-
-    @mcp.tool()
-    async def sitemanager_list_devices(
-        host_ids: list[str] | None = None,
-        time: str | None = None,
-        max_items: int = 200,
-    ) -> Any:
-        """List UniFi devices managed across the account.
-
-        Args:
-            host_ids: Optional list of host ids to filter to (from
-                ``sitemanager_list_hosts``).
-            time: Optional RFC3339 timestamp; only devices processed since then.
-            max_items: Cap on devices returned.
-        """
-        params: dict[str, Any] = {}
-        if host_ids:
-            # The API expects the ids comma-joined under the ``hostIds[]`` key.
-            params["hostIds[]"] = ",".join(host_ids)
-        if time:
-            params["time"] = time
-        c = client()
-        try:
-            return await c.get_token_collection("/devices", max_items=max_items, **params)
         finally:
             await c.aclose()
 
