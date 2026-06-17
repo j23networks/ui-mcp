@@ -81,39 +81,66 @@ def test_disabled_api_registers_no_tools():
     assert s.network_enabled is False
 
 
-async def test_phase1b_registers_full_readonly_surface():
+async def test_consolidated_registers_three_tools():
     m = build_server(Settings(network_api_key="k", site_manager_api_key=None))
     names = {t.name for t in await m.list_tools()}
-    # 8 Phase 1 + 33 Phase 1B read-only tools.
-    assert len(names) == 41
-    # representative Phase 1B tools across the signature shapes
-    for n in (
-        "network_list_pending_devices",
-        "network_list_firewall_policies",
-        "network_get_acl_rule_ordering",
-        "network_get_dns_policy",
-    ):
-        assert n in names
-    # mutations stay deferred
-    assert not any(
-        x in names for x in ("network_create_network", "network_delete_network")
+    assert names == {"network_get_info", "network_list", "network_get"}
+    # the resource registries cover the full read surface via enums
+    tools = {t.name: t for t in await m.list_tools()}
+    list_enum = tools["network_list"].inputSchema["properties"]["resource"]["enum"]
+    get_enum = tools["network_get"].inputSchema["properties"]["resource"]["enum"]
+    for r in ("sites", "devices", "firewall_policies", "acl_rule_ordering", "wans"):
+        assert r in list_enum
+    for r in ("device", "network", "device_statistics", "network_references"):
+        assert r in get_enum
+
+
+def _net_settings():
+    return Settings(
+        network_api_key="k",
+        network_base_url=BASE,
+        network_verify_tls=False,
+        site_manager_api_key=None,
     )
 
 
 @respx.mock
-async def test_phase1b_tool_calls_expected_path():
+async def test_network_list_routes_site_resource():
     route = respx.get(f"{BASE}{PATH}/sites/S1/networks").mock(
         return_value=httpx.Response(
             200, json={"offset": 0, "limit": 200, "totalCount": 1, "data": [{"id": "n1"}]}
         )
     )
-    m = build_server(
-        Settings(
-            network_api_key="k",
-            network_base_url=BASE,
-            network_verify_tls=False,
-            site_manager_api_key=None,
-        )
-    )
-    await m.call_tool("network_list_networks", {"site_id": "S1"})
+    m = build_server(_net_settings())
+    await m.call_tool("network_list", {"resource": "networks", "site_id": "S1"})
     assert route.called
+
+
+@respx.mock
+async def test_network_list_account_resource_ignores_site():
+    route = respx.get(f"{BASE}{PATH}/countries").mock(
+        return_value=httpx.Response(200, json=["US", "GB"])
+    )
+    m = build_server(_net_settings())
+    await m.call_tool("network_list", {"resource": "countries"})
+    assert route.called
+
+
+@respx.mock
+async def test_network_get_routes_with_id():
+    route = respx.get(f"{BASE}{PATH}/sites/S1/networks/N1").mock(
+        return_value=httpx.Response(200, json={"id": "N1"})
+    )
+    m = build_server(_net_settings())
+    await m.call_tool(
+        "network_get", {"resource": "network", "resource_id": "N1", "site_id": "S1"}
+    )
+    assert route.called
+    assert route.calls.last.request.headers["X-API-KEY"] == "k"
+
+
+async def test_network_list_site_resource_requires_site_id():
+    m = build_server(_net_settings())
+    # site-scoped resource without site_id should error
+    with pytest.raises(Exception, match="site_id"):
+        await m.call_tool("network_list", {"resource": "networks"})

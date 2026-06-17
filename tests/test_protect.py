@@ -28,23 +28,18 @@ def test_protect_enabled_requires_key_and_base_url():
     assert Settings(protect_api_key="k", protect_base_url=BASE).protect_enabled is True
 
 
-async def test_protect_registers_readonly_surface():
+async def test_protect_registers_consolidated_surface():
     m = build_server(_settings())
-    names = {t.name for t in await m.list_tools()}
-    assert len(names) == 34
-    for n in ("protect_list_cameras", "protect_get_camera", "protect_get_camera_rtsps_stream",
-              "protect_list_sensors", "protect_get_meta_info"):
-        assert n in names
-    # media-bytes / stream / proxy / mutations stay out
-    assert not any(
-        x in names
-        for x in (
-            "protect_get_camera_snapshot",
-            "protect_subscribe_events",
-            "protect_connector_get",
-            "protect_patch_camera",
-        )
-    )
+    tools = {t.name: t for t in await m.list_tools()}
+    assert set(tools) == {"protect_get_meta_info", "protect_list", "protect_get"}
+    list_enum = tools["protect_list"].inputSchema["properties"]["resource"]["enum"]
+    get_enum = tools["protect_get"].inputSchema["properties"]["resource"]["enum"]
+    for r in ("cameras", "sensors", "lights", "nvrs"):
+        assert r in list_enum
+    for r in ("camera", "sensor", "camera_rtsps_stream"):
+        assert r in get_enum
+    # media-bytes / stream / proxy resources stay out
+    assert "snapshot" not in get_enum and "files" not in list_enum
 
 
 @respx.mock
@@ -53,7 +48,7 @@ async def test_protect_list_returns_plain_array():
         return_value=httpx.Response(200, json=[{"id": "c1"}, {"id": "c2"}])
     )
     m = build_server(_settings())
-    await m.call_tool("protect_list_cameras", {})
+    await m.call_tool("protect_list", {"resource": "cameras"})
     assert route.called
 
 
@@ -63,6 +58,16 @@ async def test_protect_get_by_id_path():
         return_value=httpx.Response(200, json={"id": "CAM1"})
     )
     m = build_server(_settings())
-    await m.call_tool("protect_get_camera", {"device_id": "CAM1"})
+    await m.call_tool("protect_get", {"resource": "camera", "device_id": "CAM1"})
     assert route.called
     assert route.calls.last.request.headers["X-API-KEY"] == "k"
+
+
+@respx.mock
+async def test_protect_get_camera_rtsps_stream_subpath():
+    route = respx.get(f"{BASE}{PATH}/cameras/CAM1/rtsps-stream").mock(
+        return_value=httpx.Response(200, json={"rtspsUrl": "rtsps://x"})
+    )
+    m = build_server(_settings())
+    await m.call_tool("protect_get", {"resource": "camera_rtsps_stream", "device_id": "CAM1"})
+    assert route.called

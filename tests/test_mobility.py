@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from ui_mcp.config import Settings
@@ -27,18 +28,35 @@ def test_mobility_enabled_requires_key():
     assert Settings(mobility_api_key=None).mobility_enabled is False
 
 
-async def test_mobility_registers_readonly_surface():
+async def test_mobility_registers_consolidated_surface():
     m = build_server(_settings())
-    names = {t.name for t in await m.list_tools()}
-    assert names == {
-        "mobility_list_workspaces",
-        "mobility_list_workspace_admins",
-        "mobility_list_devices",
-        "mobility_get_device",
-        "mobility_list_device_clients",
+    tools = {t.name: t for t in await m.list_tools()}
+    assert set(tools) == {"mobility_list", "mobility_get_device"}
+    list_enum = tools["mobility_list"].inputSchema["properties"]["resource"]["enum"]
+    assert set(list_enum) == {
+        "workspaces",
+        "workspace_admins",
+        "devices",
+        "device_clients",
     }
-    # write endpoints stay deferred
-    assert not any("update" in n for n in names)
+
+
+@respx.mock
+async def test_mobility_list_workspaces_no_ids():
+    route = respx.get(f"{BASE}{PATH}/workspaces").mock(
+        return_value=httpx.Response(200, json=[{"id": "W1"}])
+    )
+    m = build_server(_settings())
+    await m.call_tool("mobility_list", {"resource": "workspaces"})
+    assert route.called
+
+
+async def test_mobility_list_device_clients_requires_both_ids():
+    m = build_server(_settings())
+    with pytest.raises(Exception, match="device_id"):
+        await m.call_tool(
+            "mobility_list", {"resource": "device_clients", "workspace_id": "W1"}
+        )
 
 
 @respx.mock

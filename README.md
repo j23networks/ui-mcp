@@ -45,27 +45,31 @@ without Site Manager or Protect credentials.
 
 ## Network tools (read-only)
 
-**Phase 1 — core:**
+The full read surface is exposed through **3 consolidated tools** rather than one
+per endpoint, to keep the model's tool list small:
 
 | Tool | Description |
 |------|-------------|
 | `network_get_info` | Controller version & capabilities |
-| `network_list_sites` | Local sites (source of `site_id`) |
-| `network_list_devices` | Devices in a site |
-| `network_get_device` | Single device metadata |
-| `network_get_device_stats` | Latest device metrics |
-| `network_list_clients` | Connected clients in a site |
-| `network_get_client` | Single client details |
-| `network_list_vouchers` | Hotspot vouchers in a site |
+| `network_list(resource, site_id?, max_items)` | List any collection; `resource` is an enum |
+| `network_get(resource, resource_id, site_id)` | Get any single resource by id |
 
-**Phase 1B — full read-only coverage (33 more tools):** networks (+references),
-WiFi broadcasts, firewall zones/policies (+ordering), ACL rules (+ordering),
-switching (switch stacks, MC-LAG domains, LAGs), DNS policies, traffic-matching
-lists, VPN servers & site-to-site tunnels, WANs, RADIUS profiles, DPI
-apps/categories, device tags, pending devices, countries, and voucher detail —
-as `network_list_*` / `network_get_*` tools. The full Network API inventory
-(reads + the deferred write endpoints) is catalogued in
-[docs/network_api_catalog.json](docs/network_api_catalog.json).
+`network_list` resources — **account-level** (no `site_id`): `sites`,
+`pending_devices`, `countries`, `dpi_applications`, `dpi_categories`;
+**site-level** (require `site_id`): `devices`, `clients`, `vouchers`, `networks`,
+`wifi_broadcasts`, `firewall_zones`, `firewall_policies`,
+`firewall_policy_ordering`, `acl_rules`, `acl_rule_ordering`, `switch_stacks`,
+`mclag_domains`, `lags`, `dns_policies`, `traffic_matching_lists`,
+`radius_profiles`, `vpn_servers`, `vpn_site_to_site_tunnels`, `wans`,
+`device_tags`.
+
+`network_get` resources: `device`, `device_statistics`, `client`, `voucher`,
+`network`, `network_references`, `wifi_broadcast`, `firewall_zone`,
+`firewall_policy`, `acl_rule`, `switch_stack`, `mclag_domain`, `lag`,
+`dns_policy`, `traffic_matching_list`.
+
+The full Network API inventory (reads + the deferred write endpoints) is
+catalogued in [docs/network_api_catalog.json](docs/network_api_catalog.json).
 
 ## Site Manager tools (Phase 2, read-only)
 
@@ -87,12 +91,16 @@ Local NVR API. Set `UBIQUITI_PROTECT_API_KEY` and `UBIQUITI_PROTECT_BASE_URL`
 (e.g. `https://192.168.1.1`) to enable. Local NVRs use self-signed certs, so
 `UBIQUITI_PROTECT_VERIFY_TLS=false` is the default.
 
-34 read tools — `protect_list_*` and `protect_get_*` — covering cameras, sensors,
-lights, chimes, sirens, speakers, viewers, liveviews, bridges, alarm-hubs, fobs,
-relays, link-stations, users, ULP users, arm profiles, NVRs, and meta info, plus
-`protect_get_camera_rtsps_stream` (stream URLs, not video). Media-byte endpoints
-(snapshots, file downloads), WebSocket subscriptions, and mutations are excluded;
-the full Protect API inventory is catalogued in
+**3 consolidated tools:**
+
+| Tool | Description |
+|------|-------------|
+| `protect_get_meta_info` | Protect app/NVR meta info |
+| `protect_list(resource)` | List a collection; `resource` enum: cameras, sensors, lights, chimes, sirens, speakers, viewers, liveviews, bridges, alarm_hubs, fobs, relays, link_stations, arm_profiles, users, ulp_users, nvrs |
+| `protect_get(resource, device_id)` | Get one resource by id (incl. `camera_rtsps_stream` for stream URLs) |
+
+Media-byte endpoints (snapshots, file downloads), WebSocket subscriptions, and
+mutations are excluded; the full Protect API inventory is catalogued in
 [docs/protect_api_catalog.json](docs/protect_api_catalog.json).
 
 ## Mobility tools (Phase 4, read-only)
@@ -100,13 +108,12 @@ the full Protect API inventory is catalogued in
 Cloud API. Set `UBIQUITI_MOBILITY_API_KEY` (from [unifi.ui.com](https://unifi.ui.com),
 scope `read:mobility`) to enable. Resources are workspace-scoped.
 
+**2 consolidated tools:**
+
 | Tool | Description |
 |------|-------------|
-| `mobility_list_workspaces` | Workspaces on the account (source of `workspace_id`) |
-| `mobility_list_workspace_admins` | Admins of a workspace |
-| `mobility_list_devices` | Devices in a workspace |
-| `mobility_get_device` | Single device details |
-| `mobility_list_device_clients` | Clients connected to a device |
+| `mobility_list(resource, workspace_id?, device_id?)` | List `workspaces`, `workspace_admins`, `devices`, or `device_clients` (ids required per resource) |
+| `mobility_get_device(workspace_id, device_id)` | Single device details |
 
 Device write endpoints (update name / network / wireless) are deferred; the full
 inventory is in [docs/mobility_api_catalog.json](docs/mobility_api_catalog.json).

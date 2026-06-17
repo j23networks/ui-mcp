@@ -1,26 +1,25 @@
-"""UniFi Protect API — read-only tools (Phase 3).
+"""UniFi Protect API — read-only tools (consolidated).
 
 Local NVR API, base ``https://<nvr>/proxy/protect/integration/v1``, auth via
 ``X-API-KEY``. Lists return plain JSON arrays and single resources plain objects
-(no pagination envelope), so tools just return the parsed JSON.
+(no pagination envelope).
 
-Scope: **metadata + URLs only**, per the project plan. The following endpoints are
-intentionally *not* exposed as read tools:
+Exposed through three tools driven by a resource registry:
 
-- ``/cameras/{id}/snapshot`` and ``/files/{fileType}`` — return media bytes.
-- ``/subscribe/events`` and ``/subscribe/devices`` — long-lived SSE streams that
-  don't fit a request/response tool.
-- ``/connector/consoles/{id}/*path`` — a generic cloud-connector passthrough.
+- ``protect_get_meta_info`` — Protect application meta/system info (singleton).
+- ``protect_list(resource)`` — any device/resource collection, by enum.
+- ``protect_get(resource, device_id)`` — any single resource by id.
 
-``/cameras/{id}/rtsps-stream`` *is* exposed: it returns stream URLs/metadata, not
-bytes. All mutating endpoints (PATCH/POST/DELETE: device config, PTZ, siren/speaker
-actions, arm-profiles) are deferred; the full inventory is in
-``docs/protect_api_catalog.json``.
+Scope is **metadata + URLs only**: media-byte endpoints (``/snapshot``,
+``/files/{type}``), WebSocket ``/subscribe/*`` streams, the connector passthrough,
+and all mutations are excluded. ``camera_rtsps_stream`` is included (it returns
+stream URLs, not bytes). Full inventory in ``docs/protect_api_catalog.json``.
+
+(No ``from __future__ import annotations`` so the dynamic ``Literal`` enums are
+real annotation objects FastMCP can introspect.)
 """
 
-from __future__ import annotations
-
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
@@ -28,6 +27,50 @@ from ..config import Settings
 from ..http import UbiquitiClient
 
 API_PATH = "/proxy/protect/integration/v1"
+
+# resource key -> path relative to API_PATH (collections; plain arrays)
+_LIST: dict[str, str] = {
+    "cameras": "/cameras",
+    "sensors": "/sensors",
+    "lights": "/lights",
+    "chimes": "/chimes",
+    "sirens": "/sirens",
+    "speakers": "/speakers",
+    "viewers": "/viewers",
+    "liveviews": "/liveviews",
+    "bridges": "/bridges",
+    "alarm_hubs": "/alarm-hubs",
+    "fobs": "/fobs",
+    "relays": "/relays",
+    "link_stations": "/link-stations",
+    "arm_profiles": "/arm-profiles",
+    "users": "/users",
+    "ulp_users": "/ulp-users",
+    "nvrs": "/nvrs",
+}
+
+# resource key -> path relative to API_PATH (single resource by {id})
+_GET: dict[str, str] = {
+    "camera": "/cameras/{id}",
+    "camera_rtsps_stream": "/cameras/{id}/rtsps-stream",
+    "sensor": "/sensors/{id}",
+    "light": "/lights/{id}",
+    "chime": "/chimes/{id}",
+    "siren": "/sirens/{id}",
+    "speaker": "/speakers/{id}",
+    "viewer": "/viewers/{id}",
+    "liveview": "/liveviews/{id}",
+    "bridge": "/bridges/{id}",
+    "alarm_hub": "/alarm-hubs/{id}",
+    "fob": "/fobs/{id}",
+    "relay": "/relays/{id}",
+    "link_station": "/link-stations/{id}",
+    "user": "/users/{id}",
+    "ulp_user": "/ulp-users/{id}",
+}
+
+ListResource = Literal[tuple(_LIST)]  # type: ignore[valid-type]
+GetResource = Literal[tuple(_GET)]  # type: ignore[valid-type]
 
 
 def register(mcp: FastMCP, settings: Settings) -> None:
@@ -42,72 +85,41 @@ def register(mcp: FastMCP, settings: Settings) -> None:
             api_path=API_PATH,
         )
 
-    def _list(path: str):
-        async def tool() -> Any:
-            c = client()
-            try:
-                return await c.get(path)
-            finally:
-                await c.aclose()
+    @mcp.tool()
+    async def protect_get_meta_info() -> Any:
+        """Get UniFi Protect application meta/system info (NVR/app version, etc.)."""
+        c = client()
+        try:
+            return await c.get("/meta/info")
+        finally:
+            await c.aclose()
 
-        return tool
+    @mcp.tool()
+    async def protect_list(resource: ListResource) -> Any:
+        """List a Protect resource collection (full metadata for each item).
 
-    def _by_id(path: str):
-        async def tool(device_id: str) -> Any:
-            c = client()
-            try:
-                return await c.get(path.format(id=device_id))
-            finally:
-                await c.aclose()
+        Args:
+            resource: Which collection to list (see the enum of allowed values) —
+                e.g. ``cameras``, ``sensors``, ``lights``, ``nvrs``.
+        """
+        c = client()
+        try:
+            return await c.get(_LIST[resource])
+        finally:
+            await c.aclose()
 
-        return tool
+    @mcp.tool()
+    async def protect_get(resource: GetResource, device_id: str) -> Any:
+        """Get a single Protect resource by id.
 
-    # name, path (relative to /v1), description
-    lists = [
-        ("protect_list_cameras", "/cameras", "List all Protect cameras with full metadata."),
-        ("protect_list_sensors", "/sensors", "List all Protect sensors (motion/door/etc.)."),
-        ("protect_list_lights", "/lights", "List all Protect lights."),
-        ("protect_list_chimes", "/chimes", "List all Protect chimes."),
-        ("protect_list_sirens", "/sirens", "List all Protect sirens."),
-        ("protect_list_speakers", "/speakers", "List all Protect speakers."),
-        ("protect_list_viewers", "/viewers", "List all Protect viewers (display devices)."),
-        ("protect_list_liveviews", "/liveviews", "List all configured live views."),
-        ("protect_list_bridges", "/bridges", "List all Protect bridges."),
-        ("protect_list_alarm_hubs", "/alarm-hubs", "List all alarm hubs."),
-        ("protect_list_fobs", "/fobs", "List all key fobs."),
-        ("protect_list_relays", "/relays", "List all relays."),
-        ("protect_list_link_stations", "/link-stations", "List all link stations."),
-        ("protect_list_arm_profiles", "/arm-profiles", "List all arm profiles."),
-        ("protect_list_users", "/users", "List Protect users."),
-        ("protect_list_ulp_users", "/ulp-users", "List UniFi LocalPortal (ULP) users."),
-        ("protect_list_nvrs", "/nvrs", "List the NVR(s) and their system info."),
-        ("protect_get_meta_info", "/meta/info", "Get Protect application meta/system info."),
-    ]
-    by_id = [
-        ("protect_get_camera", "/cameras/{id}", "Get one camera. device_id from protect_list_cameras."),
-        ("protect_get_sensor", "/sensors/{id}", "Get one sensor. device_id from protect_list_sensors."),
-        ("protect_get_light", "/lights/{id}", "Get one light. device_id from protect_list_lights."),
-        ("protect_get_chime", "/chimes/{id}", "Get one chime. device_id from protect_list_chimes."),
-        ("protect_get_siren", "/sirens/{id}", "Get one siren. device_id from protect_list_sirens."),
-        ("protect_get_speaker", "/speakers/{id}", "Get one speaker. device_id from protect_list_speakers."),
-        ("protect_get_viewer", "/viewers/{id}", "Get one viewer. device_id from protect_list_viewers."),
-        ("protect_get_liveview", "/liveviews/{id}", "Get one live view. device_id from protect_list_liveviews."),
-        ("protect_get_bridge", "/bridges/{id}", "Get one bridge. device_id from protect_list_bridges."),
-        ("protect_get_alarm_hub", "/alarm-hubs/{id}", "Get one alarm hub. device_id from protect_list_alarm_hubs."),
-        ("protect_get_fob", "/fobs/{id}", "Get one key fob. device_id from protect_list_fobs."),
-        ("protect_get_relay", "/relays/{id}", "Get one relay. device_id from protect_list_relays."),
-        ("protect_get_link_station", "/link-stations/{id}", "Get one link station. device_id from protect_list_link_stations."),
-        ("protect_get_user", "/users/{id}", "Get one Protect user. device_id is the user id from protect_list_users."),
-        ("protect_get_ulp_user", "/ulp-users/{id}", "Get one ULP user. device_id is the user id from protect_list_ulp_users."),
-        ("protect_get_camera_rtsps_stream", "/cameras/{id}/rtsps-stream",
-         "Get RTSPS stream URLs/metadata for a camera (stream addresses, not video bytes). device_id from protect_list_cameras."),
-    ]
-
-    for _name, _path, _doc in lists:
-        _fn = _list(_path)
-        _fn.__name__ = _name
-        mcp.tool(name=_name, description=_doc)(_fn)
-    for _name, _path, _doc in by_id:
-        _fn = _by_id(_path)
-        _fn.__name__ = _name
-        mcp.tool(name=_name, description=_doc)(_fn)
+        Args:
+            resource: Which resource type to fetch (see the enum). Use
+                ``camera_rtsps_stream`` to get a camera's RTSPS stream URLs
+                (addresses/metadata, not video bytes).
+            device_id: The resource's id (from the matching ``protect_list``).
+        """
+        c = client()
+        try:
+            return await c.get(_GET[resource].format(id=device_id))
+        finally:
+            await c.aclose()
